@@ -5,7 +5,7 @@ import "hardhat/console.sol";
 
 
 contract DirectDebit {
-  address owner;
+  address payable owner;
 
   struct allowed {
     bool isAllowed;
@@ -15,13 +15,12 @@ contract DirectDebit {
   mapping (address => allowed) allowedRecipients;
 
   struct directDebitOrder{
-    address recipient; // Who has include paiment order
-    uint document_identifier; // Recipient document identifier for identfication purposes
+    //uint document_identifier; // Recipient document identifier for identfication purposes
     bytes32 document_hash; // Recipient document hash for validation purposes
     uint amount; // Ammount to pay 
     uint validated_block; // block where has been validated by owner or 0 if it has not
-    bool isValidated; // If has been validated and payed
   }
+  mapping(address => mapping(uint => directDebitOrder)) orders;
 
   modifier restrictedToOwner() {
     require(
@@ -77,6 +76,47 @@ contract DirectDebit {
   function getBalance() public view returns(uint){
     console.log("Get Balance");
     return address(this).balance;
+  }
+
+  function returnFunds(uint amount) public restrictedToOwner{
+    console.log("ReturnFunds ",amount);
+    require(amount <= getBalance(),
+    "not enoght funds");
+    owner.transfer(amount);//not send to avoid reentrancy issues
+    console.log("Funds in contract ",getBalance());
+  }
+
+  function addOrder(
+    address recipient, 
+    uint document_identifier,
+    bytes32 document_hash,
+    uint amount
+    ) public{
+
+      require(allowedRecipients[recipient].isAllowed,"Not Allowed recipient");
+      require(allowedRecipients[recipient].maxAmount>=amount,
+        "Amount exceeds max amount allowed for this recipient");
+      directDebitOrder storage order;
+      order=orders[recipient][document_identifier];
+      require(order.validated_block==0,"Trying to modifify a processed order");
+      order.document_hash=document_hash;
+      order.amount=amount;
+      order.validated_block=block.number;
+    }
+
+  function getOrder(address recipient, uint document_identifier) public view
+  returns(
+    bytes32 document_hash,
+    uint amount,
+    uint validated_validated
+  ){
+    directDebitOrder memory order;
+    order=orders[recipient][document_identifier];
+    return(
+      order.document_hash,
+      order.amount,
+      order.validated_block
+    );
   }
   
 }

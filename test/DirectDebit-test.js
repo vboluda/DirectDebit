@@ -30,6 +30,11 @@ describe("DirectDebit", function() {
     let balance=(await directdebit.getBalance());
     //console.log("LOG - CONTRACT BALANCE "+balance);
     expect(""+balance).equals("1000");
+    //await directdebit.returnFunds(2000);
+    //expect(""+balance).equals("1000");
+    await directdebit.returnFunds(500);
+    balance=(await directdebit.getBalance());
+    expect(""+balance).equals("500");
   });
 
   it("test allow&deny", async function() {
@@ -51,6 +56,29 @@ describe("DirectDebit", function() {
     allowedRecipient=await directdebit.getAllowed(await address2.getAddress());
     //console.log("LOG - allowed "+JSON.stringify(allowedRecipient));
     assert.isNotTrue(allowedRecipient[0]);
+  });
+
+  it("test process orders", async function() {
+    const [owner,address1] = await ethers.getSigners();
+
+    const DirectDebit = await ethers.getContractFactory("DirectDebit");
+    const directdebit = await DirectDebit.deploy();
+    await directdebit.deployed();
+
+    console.log("LOG - DEPLOYED ");
+    let _address1=await address1.getAddress();
+    let order=await directdebit.getOrder(_address1,1);
+    console.log("LOG - GetOrder "+JSON.stringify(order));
+    await directdebit.allow(_address1,2000);
+    await directdebit.addOrder(
+      _address1,
+      1,
+      "0x9944615dfc9c3a705f4363e6659196a61eaa140ab72922df3ac1f7814f050164",
+      1000
+      );
+    order=await directdebit.getOrder(_address1,1);
+    console.log("LOG - GetOrder "+JSON.stringify(order));
+    expect(order[0]).equals("0x9944615dfc9c3a705f4363e6659196a61eaa140ab72922df3ac1f7814f050164");
   });
 
 });
