@@ -1,5 +1,7 @@
 const { expect, assert } = require("chai");
 
+//THIS TESTS ARE NOT ENOUGHT. SHOULD BE MUCH MORE DETAILED 
+
 describe("DirectDebit", function() {
   it("test owner", async function() {
     const DirectDebit = await ethers.getContractFactory("DirectDebit");
@@ -68,7 +70,7 @@ describe("DirectDebit", function() {
     console.log("LOG - DEPLOYED ");
     let _address1=await address1.getAddress();
     let order=await directdebit.getOrder(_address1,1);
-    console.log("LOG - GetOrder "+JSON.stringify(order));
+    //console.log("LOG - GetOrder "+JSON.stringify(order));
     await directdebit.allow(_address1,2000);
     await directdebit.addOrder(
       _address1,
@@ -77,8 +79,19 @@ describe("DirectDebit", function() {
       1000
       );
     order=await directdebit.getOrder(_address1,1);
-    console.log("LOG - GetOrder "+JSON.stringify(order));
+    //console.log("LOG - GetOrder "+JSON.stringify(order));
     expect(order[0]).equals("0x9944615dfc9c3a705f4363e6659196a61eaa140ab72922df3ac1f7814f050164");
+
+    await owner.sendTransaction({
+      to: directdebit.address,
+      value: 3000
+    });
+
+    await directdebit.orderAprobal(_address1,1);
+
+    balance=(await directdebit.getBalance());
+    //console.log("LOG - Balance "+balance);
+    expect(""+balance).equals("2000");
   });
 
 });
