@@ -92,6 +92,9 @@ describe("DirectDebit", function() {
     balance=(await instance.getBalance());
     //console.log("LOG - Balance "+balance);
     expect(""+balance).equals("2000");
+    console.log("*******************************");
+    let code=instance.orderAprobal(_address1,1).encodeABI();
+    console.log("*******************************");
   });
 
 });
