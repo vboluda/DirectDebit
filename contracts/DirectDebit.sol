@@ -1,14 +1,14 @@
-//SPDX-License-Identifier: Unlicense
 pragma solidity ^0.7.0;
 
 import "hardhat/console.sol";
+import "./IDirectDebit.sol";
 
 /***************************************** DirectDebit  ***********************************************
 Contract for direct debit of recurring payments in the same way as in a traditional bank
 Service providers who have permissions may include payment orders in this contract. 
 If the owner agrees, will approve the order and transfer the amount of the payment to the supplier.
 */
-contract DirectDebit {
+contract DirectDebit is IDirectDebit{
   //CONTRACT OWNER
   address payable owner;
 
@@ -38,8 +38,9 @@ contract DirectDebit {
 
   //MODIFIER TO ENSURE ONLY OWNER CAN CALL THESE FUNCTIONS
   modifier restrictedToOwner() {
+    //WE WANT USER ADDRESS WHICH ORIGINATES THIS TX NOT THE CONTRACT IN THE MIDDLE
     require(
-      msg.sender == owner,
+      tx.origin == owner,
       "Not authorized. Owner is required"
     );
     _;
@@ -47,8 +48,9 @@ contract DirectDebit {
 
   //CONSTRUCTOR.
   constructor() {
-    console.log("Deploying with owner:", msg.sender);
-    owner=msg.sender;
+    console.log("Deploying with owner:", tx.origin);
+    //WE WANT USER ADDRESS WHICH ORIGINATES THIS TX NOT THE CONTRACT IN THE MIDDLE
+    owner=tx.origin; 
   }
 
   //DESTRUCTOR EN CASE NEEDED. HANDLE WITH CARE!!!
@@ -57,12 +59,12 @@ contract DirectDebit {
   }
 
    //PUBLIC GETTER FOR OWNER
-  function getOwner() public view returns (address){
+  function getOwner() override public view returns (address){
     return owner;
   }
 
   //PUBLIC FUNCTION TO VERIFY IF A RECIPIENT CAN INCLUDE ORDERS IN THIS CONTRACT, AND MAXIMUM AMOUNT
-  function getAllowed(address recipient) public view 
+  function getAllowed(address recipient) override public view 
     returns(bool _isAllowed, uint _maxAmmount){
       console.log("getAllowed ", recipient);
       allowed memory _allowed;
@@ -74,14 +76,14 @@ contract DirectDebit {
     }
 
     //PUBLIC FUNCTION TO ADD A NEW RECIPIENT GRANTED TO ADD ORDERS TO SMART CONTRACT
-    function allow(address recipient, uint _maxAmount) public restrictedToOwner {
+    function allow(address recipient, uint _maxAmount) override public restrictedToOwner {
       console.log("allow ('%s',  '%i')", recipient, _maxAmount);
       allowedRecipients[recipient].isAllowed=true;
       allowedRecipients[recipient].maxAmount=_maxAmount;
     }
 
     //PUBLIC FUNCTION TO PREVENT A RECIPIENT FOR INCLUDING NEW ORDERS
-    function deny(address recipient) public restrictedToOwner {
+    function deny(address recipient) override public restrictedToOwner {
       console.log("deny ", recipient);
       allowedRecipients[recipient].isAllowed=false;
     }
@@ -97,13 +99,13 @@ contract DirectDebit {
   }
 
   // GETTER FOR CONTRACT BALANCE
-  function getBalance() public view returns(uint){
+  function getBalance() override public view returns(uint){
     console.log("Get Balance");
     return address(this).balance;
   }
 
   //IN CASE NEEDED OWNER CAN WITHDRAW FUNDS FROM THIS CONTRACT. IT IS ITS MONEY
-  function returnFunds(uint amount) public restrictedToOwner{
+  function returnFunds(uint amount) override public restrictedToOwner{
     console.log("ReturnFunds ",amount);
     require(amount <= getBalance(),
     "not enought funds");
@@ -117,7 +119,7 @@ contract DirectDebit {
     uint document_identifier,
     bytes32 document_hash,
     uint amount
-    ) public{
+    ) override public{
 
       require(allowedRecipients[recipient].isAllowed,"Not Allowed recipient");
       require(allowedRecipients[recipient].maxAmount>=amount,
@@ -131,7 +133,7 @@ contract DirectDebit {
     }
 
   //GET ORDER DETAILS FROM RECIPIENT ADDRESS AND DOCUMENT IDENTIFIER
-  function getOrder(address recipient, uint document_identifier) public view
+  function getOrder(address recipient, uint document_identifier) override public view
   returns(
     bytes32 document_hash,
     uint amount,
@@ -148,7 +150,8 @@ contract DirectDebit {
 
   //OWNER IF AGREES CAN APROVE PAYMENT ORDER THIS WILL DISABLE THIS ORDER AN CAUSE FUNDS TO BE TRANSFERED TO 
   //   RECIPIENT ADDRESS
-  function orderAprobal(address payable recipient, uint document_identifier) public restrictedToOwner{
+  function orderAprobal(address payable recipient, uint document_identifier) 
+   override public restrictedToOwner{
     directDebitOrder storage order=orders[recipient][document_identifier];
     require(order.amount <=getBalance(),"No enought funds to accept this order");
     require(order.validated_block == 0 ,"Cannot accept: Order Previously accepted");
