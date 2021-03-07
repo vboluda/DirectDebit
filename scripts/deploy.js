@@ -9,10 +9,10 @@ async function main() {
     
     console.log("Account balance:", (await deployer.getBalance()).toString());
   
-    const DirectDebit = await ethers.getContractFactory("DirectDebit");
-    const directdebit = await DirectDebit.deploy();
+    const DirectDebitFactory = await ethers.getContractFactory("DirectDebitFactory");
+    const instance = await DirectDebitFactory.deploy();
   
-    console.log("Contract address:", directdebit.address);
+    console.log("Contract address:", instance.address);
   }
   
   main()
